@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-n-push:
-    runs-on: [self-hosted, Linux]
+    runs-on: [tanzu]
     timeout-minutes: 5
 
     steps:
