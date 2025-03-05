@@ -1,0 +1,60 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - pulsatrix
+
+jobs:
+  build-n-push:
+    runs-on: [self-hosted, Linux]
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # Set new version
+      - name: Bump version and create tag
+        id: semanticversion
+        uses: hennejg/github-tag-action@v4.2.4
+        with:
+          release_branches: master
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag_prefix: ""
+
+      - name: Verify and print new build number
+        run: |
+          if echo '${{ steps.semanticversion.outputs.new_tag }}' |grep -Eq '^[0-9]+[.][0-9]+[.][0-9]+$'; then
+            echo Tag '${{ steps.semanticversion.outputs.new_tag }}', New version '${{ steps.semanticversion.outputs.new_version }}', Changelog '${{ steps.semanticversion.outputs.changelog }}'
+          else
+            echo 'unexpected tag format - aborting'
+            exit -1
+          fi
+
+      - name: Build and push docker image
+        env:
+          REGISTRY_USERID: ${{ secrets.LEVIGO_NEXUS_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.LEVIGO_NEXUS_PASSWORD }}
+          REGISTRY_URL: ${{ secrets.LEVIGO_NEXUS_REGISTRY_RELEASES }}
+          IMAGE_NAME: "${{ secrets.LEVIGO_NEXUS_REGISTRY_RELEASES }}/pulsatrix/spilo:${{ steps.semanticversion.outputs.new_version }}"
+        run: |
+          cd postgres-appliance
+          docker login ${REGISTRY_URL} --username ${REGISTRY_USERID} --password ${REGISTRY_PASSWORD}
+          docker build \
+            -t ${IMAGE_NAME} \
+            --build-arg TIMESCALEDB_APACHE_ONLY=false \
+            .
+          docker push ${IMAGE_NAME}
+
+      ## Notify MM
+      - name: Notify MM about new release
+        uses: hennejg/slack-build-notifier@v1.1
+        with:
+          username: GitHub
+          icon_emoji: octocat
+          channel: "pulsatrix-ci"
+          text: Built new Spilo image `${{ steps.semanticversion.outputs.new_version }}` of *${{ github.repository }}*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+        if: always()
