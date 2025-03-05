@@ -28,8 +28,9 @@ jobs:
 
       - name: Verify and print new build number
         run: |
-          if echo '${{ steps.semanticversion.outputs.new_tag }}' | grep -Eq '^[0-9]+[.][0-9]+[.][0-9]+$'; then
-            echo Tag '${{ steps.semanticversion.outputs.new_tag }}', New version '${{ steps.semanticversion.outputs.new_version }}', Changelog '${{ steps.semanticversion.outputs.changelog }}'
+          echo "previous tag: '${{ steps.semanticversion.outputs.previous_tag }}'"
+          if echo '${{ steps.semanticversion.outputs.new_tag }}' |grep -Eq '^v[0-9]+[.][0-9]+[.][0-9]+$'; then
+            echo Tag '${{ steps.semanticversion.outputs.new_tag }}', New version '${{ steps.semanticversion.outputs.new_version }}'
           else
             echo 'unexpected tag format - aborting'
             exit -1
