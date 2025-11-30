@@ -256,6 +256,7 @@ if [ "$DEMO" != "true" ]; then
                 started=1
             elif [ $started = 1 ]; then
                 for d1 in extension contrib contrib/postgis-$POSTGIS_VERSION; do
+                    [ -d "$v1/$d1" ] || continue  # Skip if directory doesn't exist
                     cd "$v1/$d1"
                     d2="$d1"
                     d1="../../${v1##*/}/$d1"
